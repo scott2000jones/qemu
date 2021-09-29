@@ -496,7 +496,7 @@ void *tcg_malloc_internal(TCGContext *s, int size)
 {
     TCGPool *p;
     int pool_size;
-    
+
     if (size > TCG_POOL_CHUNK_SIZE) {
         /* big malloc: insert a new pool (XXX: could optimize) */
         p = g_malloc(sizeof(TCGPool) + size);
@@ -517,7 +517,7 @@ void *tcg_malloc_internal(TCGContext *s, int size)
                 p = g_malloc(sizeof(TCGPool) + pool_size);
                 p->size = pool_size;
                 p->next = NULL;
-                if (s->pool_current) 
+                if (s->pool_current)
                     s->pool_current->next = p;
                 else
                     s->pool_first = p;
@@ -3020,8 +3020,8 @@ static void dump_regs(TCGContext *s)
 
     for(i = 0; i < TCG_TARGET_NB_REGS; i++) {
         if (s->reg_to_temp[i] != NULL) {
-            printf("%s: %s\n", 
-                   tcg_target_reg_names[i], 
+            printf("%s: %s\n",
+                   tcg_target_reg_names[i],
                    tcg_get_arg_str_ptr(s, buf, sizeof(buf), s->reg_to_temp[i]));
         }
     }
@@ -3038,7 +3038,7 @@ static void check_regs(TCGContext *s)
         ts = s->reg_to_temp[reg];
         if (ts != NULL) {
             if (ts->val_type != TEMP_VAL_REG || ts->reg != reg) {
-                printf("Inconsistency for register %s:\n", 
+                printf("Inconsistency for register %s:\n",
                        tcg_target_reg_names[reg]);
                 goto fail;
             }
@@ -3668,14 +3668,14 @@ static void tcg_reg_alloc_op(TCGContext *s, const TCGOp *op)
     nb_iargs = def->nb_iargs;
 
     /* copy constants */
-    memcpy(new_args + nb_oargs + nb_iargs, 
+    memcpy(new_args + nb_oargs + nb_iargs,
            op->args + nb_oargs + nb_iargs,
            sizeof(TCGArg) * def->nb_cargs);
 
     i_allocated_regs = s->reserved_regs;
     o_allocated_regs = s->reserved_regs;
 
-    /* satisfy input constraints */ 
+    /* satisfy input constraints */
     for (k = 0; k < nb_iargs; k++) {
         TCGRegSet i_preferred_regs, o_preferred_regs;
 
@@ -3749,7 +3749,7 @@ static void tcg_reg_alloc_op(TCGContext *s, const TCGOp *op)
         const_args[i] = 0;
         tcg_regset_set_reg(i_allocated_regs, reg);
     }
-    
+
     /* mark dead temporaries and free the associated registers */
     for (i = nb_oargs; i < nb_oargs + nb_iargs; i++) {
         if (IS_DEAD_ARG(i)) {
@@ -3763,7 +3763,7 @@ static void tcg_reg_alloc_op(TCGContext *s, const TCGOp *op)
         tcg_reg_alloc_bb_end(s, i_allocated_regs);
     } else {
         if (def->flags & TCG_OPF_CALL_CLOBBER) {
-            /* XXX: permit generic clobber register list ? */ 
+            /* XXX: permit generic clobber register list ? */
             for (i = 0; i < TCG_TARGET_NB_REGS; i++) {
                 if (tcg_regset_test_reg(tcg_target_call_clobber_regs, i)) {
                     tcg_reg_free(s, i, i_allocated_regs);
@@ -3775,7 +3775,7 @@ static void tcg_reg_alloc_op(TCGContext *s, const TCGOp *op)
                an exception. */
             sync_globals(s, i_allocated_regs);
         }
-        
+
         /* satisfy the output constraints */
         for(k = 0; k < nb_oargs; k++) {
             i = def->args_ct[k].sort_index;
@@ -3960,7 +3960,7 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
 
     /* assign stack slots first */
     call_stack_size = (nb_iargs - nb_regs) * sizeof(tcg_target_long);
-    call_stack_size = (call_stack_size + TCG_TARGET_STACK_ALIGN - 1) & 
+    call_stack_size = (call_stack_size + TCG_TARGET_STACK_ALIGN - 1) &
         ~(TCG_TARGET_STACK_ALIGN - 1);
     allocate_args = (call_stack_size > TCG_STATIC_CALL_ARGS_SIZE);
     if (allocate_args) {
@@ -3985,14 +3985,21 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
         stack_offset += sizeof(tcg_target_long);
 #endif
     }
-    
+
     /* assign input registers */
     allocated_regs = s->reserved_regs;
+    int gpri = 0, fpri = 0;
+
     for (i = 0; i < nb_regs; i++) {
         arg = op->args[nb_oargs + i];
         if (arg != TCG_CALL_DUMMY_ARG) {
             ts = arg_temp(arg);
-            reg = tcg_target_call_iarg_regs[i];
+
+            if (ts->type == TCG_TYPE_V128) {
+                reg = tcg_target_call_iarg_regs_fp[fpri++];
+            } else {
+                reg = tcg_target_call_iarg_regs[gpri++];
+            }
 
             if (ts->val_type == TEMP_VAL_REG) {
                 if (ts->reg != reg) {
@@ -4018,14 +4025,14 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
             tcg_regset_set_reg(allocated_regs, reg);
         }
     }
-    
+
     /* mark dead temporaries and free the associated registers */
     for (i = nb_oargs; i < nb_iargs + nb_oargs; i++) {
         if (IS_DEAD_ARG(i)) {
             temp_dead(s, arg_temp(op->args[i]));
         }
     }
-    
+
     /* clobber call registers */
     for (i = 0; i < TCG_TARGET_NB_REGS; i++) {
         if (tcg_regset_test_reg(tcg_target_call_clobber_regs, i)) {
@@ -4055,6 +4062,7 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
 #endif
 
     /* assign output registers and emit moves if needed */
+    gpri = fpri = 0;
     for(i = 0; i < nb_oargs; i++) {
         arg = op->args[i];
         ts = arg_temp(arg);
@@ -4062,7 +4070,12 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
         /* ENV should not be modified.  */
         tcg_debug_assert(!temp_readonly(ts));
 
-        reg = tcg_target_call_oarg_regs[i];
+        if (ts->type == TCG_TYPE_V128) {
+            reg = tcg_target_call_oarg_regs_fp[fpri++];
+        } else {
+            reg = tcg_target_call_oarg_regs[gpri++];
+        }
+
         tcg_debug_assert(s->reg_to_temp[reg] == NULL);
         if (ts->val_type == TEMP_VAL_REG) {
             s->reg_to_temp[ts->reg] = NULL;
@@ -4435,35 +4448,32 @@ void tcg_dump_info(GString *buf)
     tb_div_count = tb_count ? tb_count : 1;
     tot = s->interm_time + s->code_time;
 
-    g_string_append_printf(buf, "JIT cycles          %" PRId64
-                           " (%0.3f s at 2.4 GHz)\n",
-                           tot, tot / 2.4e9);
-    g_string_append_printf(buf, "translated TBs      %" PRId64
-                           " (aborted=%" PRId64 " %0.1f%%)\n",
-                           tb_count, s->tb_count1 - tb_count,
-                           (double)(s->tb_count1 - s->tb_count)
-                           / (s->tb_count1 ? s->tb_count1 : 1) * 100.0);
-    g_string_append_printf(buf, "avg ops/TB          %0.1f max=%d\n",
-                           (double)s->op_count / tb_div_count, s->op_count_max);
-    g_string_append_printf(buf, "deleted ops/TB      %0.2f\n",
-                           (double)s->del_op_count / tb_div_count);
-    g_string_append_printf(buf, "avg temps/TB        %0.2f max=%d\n",
-                           (double)s->temp_count / tb_div_count,
-                           s->temp_count_max);
-    g_string_append_printf(buf, "avg host code/TB    %0.1f\n",
-                           (double)s->code_out_len / tb_div_count);
-    g_string_append_printf(buf, "avg search data/TB  %0.1f\n",
-                           (double)s->search_out_len / tb_div_count);
-    
-    g_string_append_printf(buf, "cycles/op           %0.1f\n",
-                           s->op_count ? (double)tot / s->op_count : 0);
-    g_string_append_printf(buf, "cycles/in byte      %0.1f\n",
-                           s->code_in_len ? (double)tot / s->code_in_len : 0);
-    g_string_append_printf(buf, "cycles/out byte     %0.1f\n",
-                           s->code_out_len ? (double)tot / s->code_out_len : 0);
-    g_string_append_printf(buf, "cycles/search byte     %0.1f\n",
-                           s->search_out_len ?
-                           (double)tot / s->search_out_len : 0);
+    g_string_append_printf("JIT cycles          %" PRId64 " (%0.3f s at 2.4 GHz)\n",
+                tot, tot / 2.4e9);
+    g_string_append_printf("translated TBs      %" PRId64 " (aborted=%" PRId64
+                " %0.1f%%)\n",
+                tb_count, s->tb_count1 - tb_count,
+                (double)(s->tb_count1 - s->tb_count)
+                / (s->tb_count1 ? s->tb_count1 : 1) * 100.0);
+    g_string_append_printf("avg ops/TB          %0.1f max=%d\n",
+                (double)s->op_count / tb_div_count, s->op_count_max);
+    g_string_append_printf("deleted ops/TB      %0.2f\n",
+                (double)s->del_op_count / tb_div_count);
+    g_string_append_printf("avg temps/TB        %0.2f max=%d\n",
+                (double)s->temp_count / tb_div_count, s->temp_count_max);
+    g_string_append_printf("avg host code/TB    %0.1f\n",
+                (double)s->code_out_len / tb_div_count);
+    g_string_append_printf("avg search data/TB  %0.1f\n",
+                (double)s->search_out_len / tb_div_count);
+
+    g_string_append_printf("cycles/op           %0.1f\n",
+                s->op_count ? (double)tot / s->op_count : 0);
+    g_string_append_printf("cycles/in byte      %0.1f\n",
+                s->code_in_len ? (double)tot / s->code_in_len : 0);
+    g_string_append_printf("cycles/out byte     %0.1f\n",
+                s->code_out_len ? (double)tot / s->code_out_len : 0);
+    g_string_append_printf("cycles/search byte     %0.1f\n",
+                s->search_out_len ? (double)tot / s->search_out_len : 0);
     if (tot == 0) {
         tot = 1;
     }
