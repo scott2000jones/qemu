@@ -16,7 +16,6 @@ linux_user_ss.add(files(
   'mmap.c',
   'native-lib.c',
   'native-lib-idl.c',
-  'safe-syscall.S',
   'signal.c',
   'strace.c',
   'syscall.c',
