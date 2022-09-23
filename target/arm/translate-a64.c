@@ -14951,9 +14951,9 @@ static void aarch64_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
     translator_loop_temp_check(&s->base);
 }
 
-static TCGTemp *gen_nlib_call_arg(DisasContext *s, int idx, const nlib_type *t)
+static TCGTemp *gen_nlib_call_arg(DisasContext *s, int idx, nlib_type_class tc)
 {
-    switch (t->tc) {
+    switch (tc) {
     case NLTC_SINT:
     case NLTC_UINT:
     case NLTC_STRING:
@@ -14971,43 +14971,38 @@ static TCGTemp *gen_nlib_call_arg(DisasContext *s, int idx, const nlib_type *t)
 
 }
 
+#define MAX_ARGS 6
 static void gen_nlib_call(DisasContext *s, const nlib_function *fn)
 {
     // Technical limitation for argument count - possibly?
-    if (fn->nr_args > 6) {
+    if (fn->nr_args > MAX_ARGS) {
         fprintf(stderr, "nlib: too many arguments\n");
         exit(EXIT_FAILURE);
     }
-
-    int gpri = 0, fpri = 0;
 
     // Prepare the return value
     TCGTemp *retval;
     if (fn->retty.tc == NLTC_VOID) {
         retval = NULL;
     } else {
-        retval = gen_nlib_call_arg(s, 0, &fn->retty);
+        retval = gen_nlib_call_arg(s, 0, (&fn->retty)->tc);
     }
 
     // Prepare function arguments
-    TCGTemp *args[fn->nr_args+1];
+    TCGTemp *args[(MAX_ARGS*2)+1];
 
+    // Add return value as first arg if it is present (and offset subsequent args)
     int o = 0;
     if (fn->retty.tc == NLTC_CPLX) {
-        args[0] = gen_nlib_call_arg(s, 8, &fn->retty);
+        args[0] = gen_nlib_call_arg(s, 8, (&fn->retty)->tc);
         o = 1;
     }
 
-    for (int i = 0; i < fn->nr_args; i++) {
-        int reg;
-        if (fn->argty[i].tc == NLTC_FLOAT) {
-            reg = fpri++;
-        } else {
-            reg = gpri++;
-        }
-
-        args[i+o] = gen_nlib_call_arg(s, reg, &fn->argty[i]);
-    }
+    // Copy all integer and float registers to capture all possible args
+    for (int i = 0; i < MAX_ARGS; i++)
+        args[i+o] = gen_nlib_call_arg(s, i, NLTC_FLOAT);
+    for (int i = 0; i < MAX_ARGS; i++)
+        args[i+o+MAX_ARGS] = gen_nlib_call_arg(s, i, NLTC_CPLX);
 
     // Generate the call instruction
     tcg_gen_callN(fn->fnptr, retval, fn->nr_args, args);
