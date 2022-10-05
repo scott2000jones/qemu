@@ -339,6 +339,13 @@ static inline uint32_t extract32(uint32_t value, int start, int length)
     return (value >> start) & (~0U >> (32 - length));
 }
 
+static inline uint32_t extract32__(uint32_t value, int start, int length)
+{
+    assert(start >= 0 && length > 0);
+    // assert(length <= 32 - start);
+    return (value >> start) & (~0U >> (32 - length));
+}
+
 /**
  * extract8:
  * @value: the value to extract the bit field from

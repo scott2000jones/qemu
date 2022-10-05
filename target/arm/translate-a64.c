@@ -15005,7 +15005,7 @@ static void gen_nlib_call(DisasContext *s, const nlib_function *fn)
         args[i+o+MAX_ARGS] = gen_nlib_call_arg(s, i, NLTC_CPLX);
 
     // Generate the call instruction
-    tcg_gen_callN(fn->fnptr, retval, fn->nr_args, args);
+    tcg_gen_callN(fn->fnptr, retval, MAX_ARGS*2, args);
 }
 
 static void aarch64_tr_translate_nlib_call(DisasContextBase *dcbase, CPUState *cpu, void *fn)

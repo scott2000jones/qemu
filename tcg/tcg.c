@@ -1591,7 +1591,7 @@ void tcg_gen_callN(void *func, TCGTemp *ret, int nargs, TCGTemp **args)
 
     real_args = 0;
     for (i = 0; i < nargs; i++) {
-        int argtype = extract32(typemask, (i + 1) * 3, 3);
+        int argtype = extract32__(typemask, (i + 1) * 3, 3);
         bool is_64bit = (argtype & ~1) == dh_typecode_i64;
         bool want_align = false;
 
