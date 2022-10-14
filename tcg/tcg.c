@@ -1474,6 +1474,52 @@ static TCGHelperInfo nlib_dummy_helper_info = {
     .typemask = 0
 };
 
+void tcg_gen_callN_nlib(void *func, TCGTemp *ret, int nargs, TCGTemp **args) 
+{
+    int i, real_args, nb_rets, pi;
+    const TCGHelperInfo *info = &nlib_dummy_helper_info;
+    TCGOp *op;
+
+#ifdef CONFIG_PLUGIN
+    /* detect non-plugin helpers */
+    if (tcg_ctx->plugin_insn && unlikely(strncmp(info->name, "plugin_", 7))) {
+        tcg_ctx->plugin_insn->calls_helpers = true;
+    }
+#endif
+
+    op = tcg_emit_op(INDEX_op_call);
+
+    pi = 0;
+    if (ret != NULL) {
+        op->args[pi++] = temp_arg(ret);
+        nb_rets = 1;
+    } else {
+        nb_rets = 0;
+    }
+    TCGOP_CALLO(op) = nb_rets;
+
+    real_args = 0;
+    for (i = 0; i < nargs; i++) {
+        bool want_align = false;
+
+        if (TCG_TARGET_REG_BITS < 64 && want_align && (real_args & 1)) {
+            op->args[pi++] = TCG_CALL_DUMMY_ARG;
+            real_args++;
+        }
+        op->args[pi++] = temp_arg(args[i]);
+        real_args++;
+    }
+    op->args[pi++] = (uintptr_t)func;
+    op->args[pi++] = (uintptr_t)info;
+    TCGOP_CALLI(op) = real_args;
+
+    /* Make sure the fields didn't overflow.  */
+    tcg_debug_assert(TCGOP_CALLI(op) == real_args);
+    tcg_debug_assert(pi <= ARRAY_SIZE(op->args));
+
+    // printf("> exit tcg_gen_callN_nlib() \n");
+}
+
 /* Note: we convert the 64 bit args to 32 bit and do some alignment
    and endian swap. Maybe it would be better to do the alignment
    and endian swap in tcg_reg_alloc_call(). */
@@ -1591,7 +1637,7 @@ void tcg_gen_callN(void *func, TCGTemp *ret, int nargs, TCGTemp **args)
 
     real_args = 0;
     for (i = 0; i < nargs; i++) {
-        int argtype = extract32__(typemask, (i + 1) * 3, 3);
+        int argtype = extract32(typemask, (i + 1) * 3, 3);
         bool is_64bit = (argtype & ~1) == dh_typecode_i64;
         bool want_align = false;
 
@@ -3982,6 +4028,7 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
     }
 
     stack_offset = TCG_TARGET_CALL_STACK_OFFSET;
+    printf("tcg_reg_alloc_call()\n");
     for (i = nb_regs; i < nb_iargs; i++) {
         arg = op->args[nb_oargs + i];
 #ifdef TCG_TARGET_STACK_GROWSUP
@@ -4276,7 +4323,9 @@ int tcg_gen_code(TCGContext *s, TranslationBlock *tb)
 #endif
 
 #ifdef USE_TCG_OPTIMIZATIONS
+    // printf("     >>>> segfault here\n");
     tcg_optimize(s);
+    // printf("     >>>> segfault before this\n");
 #endif
 
 #ifdef CONFIG_PROFILER
@@ -4323,7 +4372,6 @@ int tcg_gen_code(TCGContext *s, TranslationBlock *tb)
         }
     }
 #endif
-
     tcg_reg_alloc_start(s);
 
     /*
@@ -4442,6 +4490,7 @@ int tcg_gen_code(TCGContext *s, TranslationBlock *tb)
                         tcg_ptr_byte_diff(s->code_ptr, s->code_buf));
 #endif
 
+    // printf("> exit tcg_gen_code()");
     return tcg_current_code_size(s);
 }
 

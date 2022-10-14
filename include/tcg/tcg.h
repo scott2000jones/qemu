@@ -1011,6 +1011,7 @@ do {\
 
 bool tcg_op_supported(TCGOpcode op);
 
+void tcg_gen_callN_nlib(void *func, TCGTemp *ret, int nargs, TCGTemp **args);
 void tcg_gen_callN(void *func, TCGTemp *ret, int nargs, TCGTemp **args);
 
 TCGOp *tcg_emit_op(TCGOpcode opc);
