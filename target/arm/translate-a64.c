@@ -15001,12 +15001,12 @@ static void gen_nlib_call(DisasContext *s, const nlib_function *fn)
 
     // Copy all integer and float registers to capture all possible args
     for (int i = 0; i < MAX_ARGS; i++) {
-        args[i+o] = gen_nlib_call_arg(s, i, NLTC_CPLX);
+        args[i+o] = gen_nlib_call_arg(s, i, NLTC_FLOAT);
         printf("%d\n", i+o);
     }
         
     for (int i = 0; i < MAX_ARGS; i++) {
-        args[i+o+MAX_ARGS] = gen_nlib_call_arg(s, i, NLTC_FLOAT);
+        args[i+o+MAX_ARGS] = gen_nlib_call_arg(s, i, NLTC_CPLX);
         printf("%d\n", i+o+MAX_ARGS);
     }
     printf("\n");

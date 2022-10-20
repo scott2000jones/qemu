@@ -721,7 +721,6 @@ static void tcg_out_vex_modrm(TCGContext *s, int opc, int r, int v, int rm)
    We handle either RM and INDEX missing with a negative value.  In 64-bit
    mode for absolute addresses, ~RM is the size of the immediate operand
    that will follow the instruction.  */
-
 static void tcg_out_sib_offset(TCGContext *s, int r, int rm, int index,
                                int shift, intptr_t offset)
 {
@@ -1163,8 +1162,10 @@ static void tcg_out_ld(TCGContext *s, TCGType type, TCGReg ret,
 static void tcg_out_st(TCGContext *s, TCGType type, TCGReg arg,
                        TCGReg arg1, intptr_t arg2)
 {
+    printf(" > CALL tcg_out_st() i386 \n");
     switch (type) {
     case TCG_TYPE_I32:
+        printf(" > I32\n");
         if (arg < 16) {
             tcg_out_modrm_offset(s, OPC_MOVL_EvGv, arg, arg1, arg2);
         } else {
@@ -1172,17 +1173,20 @@ static void tcg_out_st(TCGContext *s, TCGType type, TCGReg arg,
         }
         break;
     case TCG_TYPE_I64:
+        printf(" > I64\n");
         if (arg < 16) {
             tcg_out_modrm_offset(s, OPC_MOVL_EvGv | P_REXW, arg, arg1, arg2);
             break;
         }
         /* FALLTHRU */
     case TCG_TYPE_V64:
+        printf(" > V64\n");
         /* There is no instruction that can validate 8-byte alignment.  */
         tcg_debug_assert(arg >= 16);
         tcg_out_vex_modrm_offset(s, OPC_MOVQ_WqVq, arg, 0, arg1, arg2);
         break;
     case TCG_TYPE_V128:
+        printf(" > V128\n");
         /*
          * The gvec infrastructure is asserts that v128 vector loads
          * and stores use a 16-byte aligned offset.  Validate that the
@@ -1192,6 +1196,7 @@ static void tcg_out_st(TCGContext *s, TCGType type, TCGReg arg,
         tcg_out_vex_modrm_offset(s, OPC_MOVDQA_WxVx, arg, 0, arg1, arg2);
         break;
     case TCG_TYPE_V256:
+        printf(" > V256\n");
         /*
          * The gvec infrastructure only requires 16-byte alignment,
          * so here we must use an unaligned store.
