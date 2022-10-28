@@ -14997,24 +14997,10 @@ static void gen_nlib_call(DisasContext *s, const nlib_function *fn)
         args[0] = gen_nlib_call_arg(s, 8, (&fn->retty)->tc);
         o = 1;
     }
-    printf("offset:: %d\n", o);
 
     // Copy all integer and float registers to capture all possible args
-    for (int i = 0; i < MAX_ARGS; i++) {
-        args[i+o] = gen_nlib_call_arg(s, i, NLTC_FLOAT);
-        printf("%d\n", i+o);
-    }
-        
-    for (int i = 0; i < MAX_ARGS; i++) {
-        args[i+o+MAX_ARGS] = gen_nlib_call_arg(s, i, NLTC_CPLX);
-        printf("%d\n", i+o+MAX_ARGS);
-    }
-    printf("\n");
-    printf("\n");
-
-    for (int i = 0; i < (MAX_ARGS*2)+o; i++) printf("%d ", args[i]->reg);
-    printf("\n\n");
-    printf("Currently sending FLOAT first\n");
+    for (int i = 0; i < MAX_ARGS; i++) args[i+o] = gen_nlib_call_arg(s, i, NLTC_FLOAT);
+    for (int i = 0; i < MAX_ARGS; i++) args[i+o+MAX_ARGS] = gen_nlib_call_arg(s, i, NLTC_CPLX);
 
     // Generate the call instruction
     tcg_gen_callN_nlib(fn->fnptr, retval, MAX_ARGS*2+o, args);

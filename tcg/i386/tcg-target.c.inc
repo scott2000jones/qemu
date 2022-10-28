@@ -1164,7 +1164,6 @@ static void tcg_out_ld(TCGContext *s, TCGType type, TCGReg ret,
 static void tcg_out_st(TCGContext *s, TCGType type, TCGReg arg,
                        TCGReg arg1, intptr_t arg2)
 {
-    printf(" > CALL tcg_out_st() i386 \n");
     switch (type) {
     case TCG_TYPE_I32:
         if (arg < 16) {
