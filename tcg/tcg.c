@@ -1500,12 +1500,6 @@ void tcg_gen_callN_nlib(void *func, TCGTemp *ret, int nargs, TCGTemp **args)
 
     real_args = 0;
     for (i = 0; i < nargs; i++) {
-        bool want_align = false;
-
-        if (TCG_TARGET_REG_BITS < 64 && want_align && (real_args & 1)) {
-            op->args[pi++] = TCG_CALL_DUMMY_ARG;
-            real_args++;
-        }
         op->args[pi++] = temp_arg(args[i]);
         real_args++;
     }
@@ -3208,6 +3202,8 @@ static inline void temp_dead(TCGContext *s, TCGTemp *ts)
 static void temp_sync(TCGContext *s, TCGTemp *ts, TCGRegSet allocated_regs,
                       TCGRegSet preferred_regs, int free_or_dead)
 {
+    // printf("temp_sync fails in one of the if conditions below (?)\n");
+    printf("ts %d\n", ts->val_type);
     if (!temp_readonly(ts) && !ts->mem_coherent) {
         if (!ts->mem_allocated) {
             temp_allocate_frame(s, ts);
@@ -3248,6 +3244,7 @@ static void temp_sync(TCGContext *s, TCGTemp *ts, TCGRegSet allocated_regs,
 /* free register 'reg' by spilling the corresponding temporary if necessary */
 static void tcg_reg_free(TCGContext *s, TCGReg reg, TCGRegSet allocated_regs)
 {
+    // printf(" >> the line below produces an impossible memory address (!)\n");
     TCGTemp *ts = s->reg_to_temp[reg];
     if (ts != NULL) {
         temp_sync(s, ts, allocated_regs, 0, -1);
@@ -3268,6 +3265,8 @@ static TCGReg tcg_reg_alloc(TCGContext *s, TCGRegSet required_regs,
                             TCGRegSet allocated_regs,
                             TCGRegSet preferred_regs, bool rev)
 {
+    // printf(" > tcg_reg_alloc()\n");
+    // printf(" > required_regs: %d\n", required_regs);
     int i, j, f, n = ARRAY_SIZE(tcg_target_reg_alloc_order);
     TCGRegSet reg_ct[2];
     const int *order;
@@ -3308,6 +3307,7 @@ static TCGReg tcg_reg_alloc(TCGContext *s, TCGRegSet required_regs,
         TCGRegSet set = reg_ct[j];
 
         if (tcg_regset_single(set)) {
+            // printf(" >> register spilling \n");
             /* One register in the set.  */
             TCGReg reg = tcg_regset_first(set);
             tcg_reg_free(s, reg, allocated_regs);
@@ -3363,6 +3363,7 @@ static void temp_load(TCGContext *s, TCGTemp *ts, TCGRegSet desired_regs,
         ts->mem_coherent = 0;
         break;
     case TEMP_VAL_MEM:
+        // printf(" > init TEMP_VAL_MEM case\n");
         reg = tcg_reg_alloc(s, desired_regs, allocated_regs,
                             preferred_regs, ts->indirect_base);
         tcg_out_ld(s, ts->type, reg, ts->mem_base->reg, ts->mem_offset);
@@ -3998,7 +3999,7 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
     const int nb_iargs = TCGOP_CALLI(op);
     const TCGLifeData arg_life = op->life;
     const TCGHelperInfo *info;
-    int flags, nb_regs, i;
+    int flags, nb_i_regs, nb_v_regs, i;
     TCGReg reg;
     TCGArg arg;
     TCGTemp *ts;
@@ -4012,10 +4013,7 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
     info = tcg_call_info(op);
     flags = info->flags;
 
-    nb_regs = ARRAY_SIZE(tcg_target_call_iarg_regs);
-    if (nb_regs > nb_iargs) {
-        nb_regs = nb_iargs;
-    }
+    
 
     int num_v_iargs = 0;
     int num_i_iargs = 0;
@@ -4047,8 +4045,18 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
     printf(" >> %d\n", num_i_iargs);
     printf(" >> %d\n", num_v_iargs);
 
+    nb_i_regs = ARRAY_SIZE(tcg_target_call_iarg_regs);
+    if (nb_i_regs > num_i_iargs) {
+        nb_i_regs = num_i_iargs;
+    }
+
+    nb_v_regs = ARRAY_SIZE(tcg_target_call_iarg_regs_fp);
+    if (nb_v_regs > num_v_iargs) {
+        nb_v_regs = num_v_iargs;
+    }
+
     /* assign stack slots first */
-    call_stack_size = (nb_iargs - nb_regs) * sizeof(tcg_target_long);
+    call_stack_size = ((num_i_iargs - nb_i_regs) + (num_v_iargs - nb_v_regs)) * sizeof(tcg_target_long);
     call_stack_size = (call_stack_size + TCG_TARGET_STACK_ALIGN - 1) &
         ~(TCG_TARGET_STACK_ALIGN - 1);
     allocate_args = (call_stack_size > TCG_STATIC_CALL_ARGS_SIZE);
@@ -4059,14 +4067,25 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
     }
 
     stack_offset = TCG_TARGET_CALL_STACK_OFFSET;
-    printf("tcg_reg_alloc_call()\n");
-    printf(" > nb_regs: %d\n", nb_regs);
-    printf(" > init stack offset: %ld\n", stack_offset);
-    for (i = nb_regs; i < nb_iargs; i++) {
+    // printf("tcg_reg_alloc_call()\n");
+    // printf(" > nb_regs: %d\n", nb_regs);
+    // printf(" > init stack offset: %ld\n", stack_offset);
+    int stack_counter_i = 0;
+    int stack_counter_v = 0;
+    for (i = 0; i < nb_iargs; i++) {
         arg = op->args[nb_oargs + i];
+        ts = arg_temp(arg);
+        if (ts->type == TCG_TYPE_V128) {
+            stack_counter_v++;
+            if (stack_counter_v <= ARRAY_SIZE(tcg_target_call_iarg_regs_fp)) continue;
+        } else {
+            stack_counter_i++;
+            if (stack_counter_i <= ARRAY_SIZE(tcg_target_call_iarg_regs)) continue;
+        }
 #ifdef TCG_TARGET_STACK_GROWSUP
         stack_offset -= sizeof(tcg_target_long);
 #endif
+
         if (arg != TCG_CALL_DUMMY_ARG) {
             ts = arg_temp(arg);
             temp_load(s, ts, tcg_target_available_regs[ts->type],
@@ -4083,10 +4102,7 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
     allocated_regs = s->reserved_regs;
     int gpri = 0, fpri = 0;
 
-    int v_lim = nb_regs;
-    if (num_v_iargs < nb_regs) v_lim = num_v_iargs;
-    printf(" > v_lim: %d\n", v_lim);
-    for (i = 0; i < v_lim; i++) {
+    for (i = 0; i < nb_v_regs; i++) {
         arg = v_iargs[i];
         if (arg != TCG_CALL_DUMMY_ARG) {
             ts = arg_temp(arg);
@@ -4111,7 +4127,7 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
 
                 tcg_reg_free(s, reg, allocated_regs);
                 tcg_regset_set_reg(arg_set, reg);
-                printf("printload1\n");
+                printf("temp_load (for VECs)\n");
                 temp_load(s, ts, arg_set, allocated_regs, 0);
             }
 
@@ -4119,17 +4135,7 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
         }
     }
 
-    int i_lim = nb_regs;
-    if (num_i_iargs < nb_regs) i_lim = num_i_iargs;
-    printf(" > i_lim: %d\n", i_lim);
-
-    for (i = 0; i < i_lim; i++) { 
-    
-        printf("@@@ %d has type %d\n", i, arg_temp(i_iargs[i])->val_type);
-
-    }
-
-    for (i = 0; i < i_lim; i++) {
+    for (i = 0; i < nb_i_regs; i++) {
         arg = i_iargs[i];
         if (arg != TCG_CALL_DUMMY_ARG) {
             ts = arg_temp(arg);
@@ -4156,7 +4162,7 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
                 tcg_regset_set_reg(arg_set, reg);
                 printf(">>  iarg i counter is %d\n", i);
                 printf(">>>>> val_type is %d\n", ts->val_type);
-                printf("printload2\n");
+                printf("temp_load (for INTs)\n");
                 temp_load(s, ts, arg_set, allocated_regs, 0);
             }
 

@@ -15013,7 +15013,8 @@ static void gen_nlib_call(DisasContext *s, const nlib_function *fn)
     printf("\n");
 
     for (int i = 0; i < (MAX_ARGS*2)+o; i++) printf("%d ", args[i]->reg);
-    printf("\n");
+    printf("\n\n");
+    printf("Currently sending FLOAT first\n");
 
     // Generate the call instruction
     tcg_gen_callN_nlib(fn->fnptr, retval, MAX_ARGS*2+o, args);
