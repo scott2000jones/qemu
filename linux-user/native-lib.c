@@ -7,6 +7,7 @@
 static nlib_function **native_functions;
 static unsigned int nr_native_functions;
 static GHashTable *txln_hooks;
+static GArray *dyn_libraries;
 
 /**
  * Initialises the Native Library infrastructure
@@ -14,6 +15,7 @@ static GHashTable *txln_hooks;
 void nlib_init(void)
 {
     txln_hooks = g_hash_table_new(NULL, NULL);
+    dyn_libraries = g_array_new(false, true, sizeof(unsigned long));
 }
 
 /**
@@ -116,4 +118,12 @@ void nlib_register_txln_hook(target_ulong va, const char *fname)
 nlib_function *nlib_get_txln_hook(target_ulong va)
 {
     return (nlib_function *)g_hash_table_lookup(txln_hooks, (gconstpointer)va);
+}
+
+void nlib_register_shared_lib(const char *name) {
+    g_array_append_val(dyn_libraries, name);
+}
+
+char *nlib_get_shared_lib(unsigned int index) {
+    return g_array_index(dyn_libraries, char*, index);
 }

@@ -42,4 +42,6 @@ void nlib_fn_set_ret(nlib_function *fn, nlib_type_class tc, int width, int cnst)
 void nlib_fn_add_arg(nlib_function *fn, nlib_type_class tc, int width, int cnst);
 void nlib_register_txln_hook(unsigned long va, const char *fname);
 nlib_function *nlib_get_txln_hook(unsigned long va);
+void nlib_register_shared_lib(const char *name);
+char *nlib_get_shared_lib(unsigned int index);
 #endif

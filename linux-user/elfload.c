@@ -3355,15 +3355,18 @@ static void load_nlib(struct elfhdr *hdr, int fd, abi_ulong load_bias)
     // Find the .plt and .rela.plt sections
     struct elf_shdr *shrelaplt = NULL;
     struct elf_shdr *shplt = NULL;
+    struct elf_shdr *shdyn = NULL;
 
     for (int i = 0; i < hdr->e_shnum; ++i) {
         if (shdr[i].sh_type == SHT_RELA && !strcmp(&strings[shdr[i].sh_name], ".rela.plt")) {
             shrelaplt = &shdr[i];
         } else if (shdr[i].sh_type == SHT_PROGBITS && !strcmp(&strings[shdr[i].sh_name], ".plt")) {
             shplt = &shdr[i];
+        } else if (shdr[i].sh_type == SHT_DYNAMIC && !strcmp(&strings[shdr[i].sh_name], ".dynamic")) {
+            shdyn = &shdr[i];
         }
 
-        if (shrelaplt && shplt) {
+        if (shrelaplt && shplt && shdyn) {
             goto found;
         }
     }
@@ -3464,16 +3467,36 @@ found:
     for (int i = 0; i < relnum; i++) {
         unsigned int symbol = ELF_R_SYM(rela[i].r_info);
         // fprintf(stderr, "got rela: %lx %lx %s", rela[i].r_offset, syms[symbol].st_value, &strings[syms[symbol].st_name]);
+        // printf("got rela: %lx %lx %s", rela[i].r_offset, syms[symbol].st_value, &strings[syms[symbol].st_name]);
 
         uint64_t va = (uint64_t)g_hash_table_lookup(plt_map, (gconstpointer)rela[i].r_offset);
         if (va) {
             // fprintf(stderr, " mapped to %lx\n", va);
+            // printf(" mapped to %lx\n", va);
             nlib_register_txln_hook(va, &strings[syms[symbol].st_name]);
         } else {
             // fprintf(stderr, " no map\n");
         }
     }
 
+    // Load the .dynamic section
+    unsigned long *dyn = read_section(shdyn, fd);
+    if (!rela) {
+        g_free(dyn);
+        goto out;
+    }
+
+    for (int i = 0; i < shdyn->sh_size/sizeof(unsigned long); i += 2) {
+        // printf("%lX %lX\n", dyn[i], dyn[i+1]);
+
+        // Get type of this entry from the first 4 bytes
+        // A type of '1' indicates a NEEDED section which specifies a shared library
+        if (dyn[i] == 1) {
+            // Value of the NEEDED entry is a string table offset to the needed library's name
+            printf("Found shared library: %s\n", &strings[dyn[i+1]]);
+            nlib_register_shared_lib(&strings[dyn[i+1]]);
+        }
+    }
 
     g_hash_table_destroy(plt_map);
 
