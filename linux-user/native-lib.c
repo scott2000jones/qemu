@@ -7,7 +7,15 @@
 static nlib_function **native_functions;
 static unsigned int nr_native_functions;
 static GHashTable *txln_hooks;
-static GArray *dyn_libraries;
+static GArray *shared_libs;
+static unsigned int nr_shared_libs;
+
+static const char *nlib_fname_denylist[] = {
+    "__libc_start_main", 
+    "__gmon_start__", 
+};
+
+static int nlib_fname_denylist_count = sizeof(nlib_fname_denylist)/sizeof(nlib_fname_denylist[0]);
 
 /**
  * Initialises the Native Library infrastructure
@@ -15,7 +23,7 @@ static GArray *dyn_libraries;
 void nlib_init(void)
 {
     txln_hooks = g_hash_table_new(NULL, NULL);
-    dyn_libraries = g_array_new(false, true, sizeof(unsigned long));
+    shared_libs = g_array_new(false, true, sizeof(unsigned long));
 }
 
 /**
@@ -95,18 +103,58 @@ void nlib_fn_add_arg(nlib_function *fn, nlib_type_class tc, int width, int cnst)
  */
 void nlib_register_txln_hook(target_ulong va, const char *fname)
 {
-    nlib_function *fn = NULL;
-
-    for (int i = 0; i < nr_native_functions; i++) {
-        if (!strcmp(native_functions[i]->fname, fname)) {
-            fn = native_functions[i];
-            break;
+    for (int i = 0; i < nlib_fname_denylist_count; i++) {
+        if (g_strcmp0(nlib_fname_denylist[i], fname) == 0) {
+            printf("Did not register nlib function %s: function is on denylist\n", fname);
+            return;
         }
     }
 
-    if (!fn) {
-        return;
+    printf("> ");
+    // Allocate storage for the native function descriptor.
+    nlib_function *fn = g_malloc(sizeof(nlib_function));
+
+    // Zero out the structure.
+    memset(fn, 0, sizeof(*fn));
+
+    // Copy in the function details that we know at this time.
+    fn->fname = g_strdup(fname);
+
+    bool found = false;
+    for (int i = 0; i < nr_shared_libs; i++) {
+        fn->libname = g_strdup(g_array_index(shared_libs, char *, i));
+
+        fn->mdl = g_module_open(fn->libname, 0);
+        if (!fn->mdl) {
+            fprintf(stderr, "nlib: could not open module '%s'\n", fn->libname);
+            exit(EXIT_FAILURE);
+        }
+
+        // Attempt to resolve the function symbol from the module.
+        if (g_module_symbol((GModule *)fn->mdl, fn->fname, &fn->fnptr)) {
+            found = true;
+            break;
+        }
     }
+    if (!found) {
+        fprintf(stderr, "nlib: could not resolve function %s\n", fn->fname);
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Successfully registered hook for %s in %s\n", fn->fname, fn->libname);
+
+    // nlib_function *fn = NULL;
+
+    // for (int i = 0; i < nr_native_functions; i++) {
+    //     if (!strcmp(native_functions[i]->fname, fname)) {
+    //         fn = native_functions[i];
+    //         break;
+    //     }
+    // }
+
+    // if (!fn) {
+    //     return;
+    // }
 
     g_hash_table_insert(txln_hooks, (gpointer)va, (gpointer)fn);
 }
@@ -121,9 +169,10 @@ nlib_function *nlib_get_txln_hook(target_ulong va)
 }
 
 void nlib_register_shared_lib(const char *name) {
-    g_array_append_val(dyn_libraries, name);
+    g_array_append_val(shared_libs, name);
+    nr_shared_libs++;
 }
 
 char *nlib_get_shared_lib(unsigned int index) {
-    return g_array_index(dyn_libraries, char*, index);
+    return g_array_index(shared_libs, char*, index);
 }

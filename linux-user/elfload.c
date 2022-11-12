@@ -3419,6 +3419,25 @@ found:
         return;
     }
 
+    // Load the .dynamic section
+    unsigned long *dyn = read_section(shdyn, fd);
+    if (!rela) {
+        g_free(dyn);
+        goto out;
+    }
+
+    for (int i = 0; i < shdyn->sh_size/sizeof(unsigned long); i += 2) {
+        // printf("%lX %lX\n", dyn[i], dyn[i+1]);
+
+        // Get type of this entry from the first 4 bytes
+        // A type of '1' indicates a NEEDED section which specifies a shared library
+        if (dyn[i] == 1) {
+            // Value of the NEEDED entry is a string table offset to the needed library's name
+            printf("Found shared library: %s\n", &strings[dyn[i+1]]);
+            nlib_register_shared_lib(&strings[dyn[i+1]]);
+        }
+    }
+
     uint64_t base = shplt->sh_addr;
 
 #ifdef TARGET_AARCH64
@@ -3474,27 +3493,9 @@ found:
             // fprintf(stderr, " mapped to %lx\n", va);
             // printf(" mapped to %lx\n", va);
             nlib_register_txln_hook(va, &strings[syms[symbol].st_name]);
+            printf("done registering hooks\n");
         } else {
             // fprintf(stderr, " no map\n");
-        }
-    }
-
-    // Load the .dynamic section
-    unsigned long *dyn = read_section(shdyn, fd);
-    if (!rela) {
-        g_free(dyn);
-        goto out;
-    }
-
-    for (int i = 0; i < shdyn->sh_size/sizeof(unsigned long); i += 2) {
-        // printf("%lX %lX\n", dyn[i], dyn[i+1]);
-
-        // Get type of this entry from the first 4 bytes
-        // A type of '1' indicates a NEEDED section which specifies a shared library
-        if (dyn[i] == 1) {
-            // Value of the NEEDED entry is a string table offset to the needed library's name
-            printf("Found shared library: %s\n", &strings[dyn[i+1]]);
-            nlib_register_shared_lib(&strings[dyn[i+1]]);
         }
     }
 
@@ -3504,6 +3505,7 @@ found:
     g_free(rela);
     g_free(zplt);
     g_free(strings);
+    g_free(dyn);
 
 out:
     g_free(shdr);
