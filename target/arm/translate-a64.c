@@ -14981,12 +14981,12 @@ static void gen_nlib_call(DisasContext *s, const nlib_function *fn)
     }
 
     // Prepare the return value
-    TCGTemp *retval;
-    if (fn->retty.tc == NLTC_VOID) {
-        retval = NULL;
-    } else {
-        retval = gen_nlib_call_arg(s, 0, (&fn->retty)->tc);
-    }
+    // TCGTemp *retval;
+    // if (fn->retty.tc == NLTC_VOID) {
+    //    retval = NULL;
+    // } else {
+    //     retval = gen_nlib_call_arg(s, 0, NLTC_UINT);
+    // }
 
     // Prepare function arguments
     TCGTemp *args[(MAX_ARGS*2)+1];
@@ -15003,7 +15003,7 @@ static void gen_nlib_call(DisasContext *s, const nlib_function *fn)
     for (int i = 0; i < MAX_ARGS; i++) args[i+o+MAX_ARGS] = gen_nlib_call_arg(s, i, NLTC_CPLX);
 
     // Generate the call instruction
-    tcg_gen_callN_nlib(fn->fnptr, retval, MAX_ARGS*2+o, args);
+    __tcg_gen_callN_nlib(fn->fnptr, tcgv_i64_temp(cpu_reg(s, 0)), tcgv_vec_temp(vfp_reg(s, 0)), MAX_ARGS*2+o, args);
 }
 
 static void aarch64_tr_translate_nlib_call(DisasContextBase *dcbase, CPUState *cpu, void *fn)

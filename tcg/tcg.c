@@ -1512,6 +1512,49 @@ void tcg_gen_callN_nlib(void *func, TCGTemp *ret, int nargs, TCGTemp **args)
     tcg_debug_assert(pi <= ARRAY_SIZE(op->args));
 }
 
+void __tcg_gen_callN_nlib(void *func, TCGTemp *ret_r, TCGTemp *ret_xmm, int nargs, TCGTemp **args) 
+{
+    int i, real_args, nb_rets, pi;
+    const TCGHelperInfo *info = &nlib_dummy_helper_info;
+    TCGOp *op;
+
+#ifdef CONFIG_PLUGIN
+    /* detect non-plugin helpers */
+    if (tcg_ctx->plugin_insn && unlikely(strncmp(info->name, "plugin_", 7))) {
+        tcg_ctx->plugin_insn->calls_helpers = true;
+    }
+#endif
+
+    op = tcg_emit_op(INDEX_op_call);
+
+    pi = 0;
+    nb_rets = 0;
+    if (ret_r != NULL) {
+        op->args[pi++] = temp_arg(ret_r);
+        nb_rets++;
+    }
+    if (ret_xmm != NULL) {
+        op->args[pi++] = temp_arg(ret_xmm);
+        nb_rets++;
+    }
+
+    TCGOP_CALLO(op) = nb_rets;
+    printf("nb_rets %d\n", nb_rets);
+
+    real_args = 0;
+    for (i = 0; i < nargs; i++) {
+        op->args[pi++] = temp_arg(args[i]);
+        real_args++;
+    }
+    op->args[pi++] = (uintptr_t)func;
+    op->args[pi++] = (uintptr_t)info;
+    TCGOP_CALLI(op) = real_args;
+
+    /* Make sure the fields didn't overflow.  */
+    tcg_debug_assert(TCGOP_CALLI(op) == real_args);
+    tcg_debug_assert(pi <= ARRAY_SIZE(op->args));
+}
+
 /* Note: we convert the 64 bit args to 32 bit and do some alignment
    and endian swap. Maybe it would be better to do the alignment
    and endian swap in tcg_reg_alloc_call(). */

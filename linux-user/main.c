@@ -267,6 +267,7 @@ static void handle_arg_log_filename(const char *arg)
 
 static void handle_arg_nlib(const char *arg)
 {
+    // Set boolean flag here to say we want to register shared library functions for nlib
     nlib_load_idl(arg);
 }
 
@@ -484,7 +485,7 @@ static const struct qemu_argument arg_table[] = {
     {"trace",      "QEMU_TRACE",       true,  handle_arg_trace,
      "",           "[[enable=]<pattern>][,events=<file>][,file=<file>]"},
     {"nlib",       "QEMU_NLIB",       true,  handle_arg_nlib,
-     "",           "<file>"},
+     "",           "accelerate shared library calls by running them natively"},
 #ifdef CONFIG_PLUGIN
     {"plugin",     "QEMU_PLUGIN",      true,  handle_arg_plugin,
      "",           "[file=]<file>[,<argname>=<argvalue>]"},

@@ -12,7 +12,8 @@ static unsigned int nr_shared_libs;
 
 static const char *nlib_fname_denylist[] = {
     "__libc_start_main", 
-    "__gmon_start__", 
+    "__gmon_start__",
+    "__cxa_atexit",
 };
 
 static int nlib_fname_denylist_count = sizeof(nlib_fname_denylist)/sizeof(nlib_fname_denylist[0]);
@@ -110,7 +111,7 @@ void nlib_register_txln_hook(target_ulong va, const char *fname)
         }
     }
 
-    printf("> ");
+    // printf("> ");
     // Allocate storage for the native function descriptor.
     nlib_function *fn = g_malloc(sizeof(nlib_function));
 
@@ -141,20 +142,8 @@ void nlib_register_txln_hook(target_ulong va, const char *fname)
         exit(EXIT_FAILURE);
     }
 
-    printf("Successfully registered hook for %s in %s\n", fn->fname, fn->libname);
-
-    // nlib_function *fn = NULL;
-
-    // for (int i = 0; i < nr_native_functions; i++) {
-    //     if (!strcmp(native_functions[i]->fname, fname)) {
-    //         fn = native_functions[i];
-    //         break;
-    //     }
-    // }
-
-    // if (!fn) {
-    //     return;
-    // }
+    // printf("Successfully registered hook for %s in %s\n", fn->fname, fn->libname);
+    printf("%s in %s\n", fn->fname, fn->libname);
 
     g_hash_table_insert(txln_hooks, (gpointer)va, (gpointer)fn);
 }

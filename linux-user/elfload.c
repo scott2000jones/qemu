@@ -3493,11 +3493,11 @@ found:
             // fprintf(stderr, " mapped to %lx\n", va);
             // printf(" mapped to %lx\n", va);
             nlib_register_txln_hook(va, &strings[syms[symbol].st_name]);
-            printf("done registering hooks\n");
         } else {
             // fprintf(stderr, " no map\n");
         }
     }
+    printf("    Done registering hooks\n");
 
     g_hash_table_destroy(plt_map);
 
