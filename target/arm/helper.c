@@ -80,6 +80,7 @@ uint64_t read_raw_cp_reg(CPUARMState *env, const ARMCPRegInfo *ri)
     }
 }
 
+
 static void write_raw_cp_reg(CPUARMState *env, const ARMCPRegInfo *ri,
                              uint64_t v)
 {
@@ -9096,6 +9097,10 @@ uint32_t HELPER(udiv)(CPUARMState *env, uint32_t num, uint32_t den)
 uint32_t HELPER(rbit)(uint32_t x)
 {
     return revbit32(x);
+}
+
+void HELPER(nlib_set_al)(void) {
+    asm volatile("mov $6, %eax");
 }
 
 #ifdef CONFIG_USER_ONLY

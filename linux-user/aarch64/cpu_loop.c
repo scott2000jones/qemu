@@ -81,6 +81,13 @@ void cpu_loop(CPUARMState *env)
     int trapnr, ec, fsc, si_code, si_signo;
     abi_long ret;
 
+
+    // // Print address of CPUState, address of emulated 'v0' aarch64 register
+    // printf("AARCH64 CPU Loop %p %p %lx %lx\n", env, &(env->vfp.zregs[0]), env->vfp.zregs[0].d[0], env->vfp.zregs[0].d[1]);
+
+    // // Set SIGTRAP to force breakpoint for GDB
+    // asm volatile("int3");
+
     for (;;) {
         cpu_exec_start(cs);
         trapnr = cpu_exec(cs);

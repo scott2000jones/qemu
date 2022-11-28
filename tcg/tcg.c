@@ -1474,7 +1474,7 @@ static TCGHelperInfo nlib_dummy_helper_info = {
     .typemask = 0
 };
 
-void tcg_gen_callN_nlib(void *func, TCGTemp *ret, int nargs, TCGTemp **args) 
+void tcg_gen_callN_nlib(void *func, TCGTemp *ret_r, TCGTemp *ret_xmm, int nargs, TCGTemp **args) 
 {
     int i, real_args, nb_rets, pi;
     const TCGHelperInfo *info = &nlib_dummy_helper_info;
@@ -1487,45 +1487,17 @@ void tcg_gen_callN_nlib(void *func, TCGTemp *ret, int nargs, TCGTemp **args)
     }
 #endif
 
-    op = tcg_emit_op(INDEX_op_call);
-
-    pi = 0;
-    if (ret != NULL) {
-        op->args[pi++] = temp_arg(ret);
-        nb_rets = 1;
-    } else {
-        nb_rets = 0;
-    }
-    TCGOP_CALLO(op) = nb_rets;
-
-    real_args = 0;
-    for (i = 0; i < nargs; i++) {
-        op->args[pi++] = temp_arg(args[i]);
-        real_args++;
-    }
-    op->args[pi++] = (uintptr_t)func;
-    op->args[pi++] = (uintptr_t)info;
-    TCGOP_CALLI(op) = real_args;
-
-    /* Make sure the fields didn't overflow.  */
-    tcg_debug_assert(TCGOP_CALLI(op) == real_args);
-    tcg_debug_assert(pi <= ARRAY_SIZE(op->args));
-}
-
-void __tcg_gen_callN_nlib(void *func, TCGTemp *ret_r, TCGTemp *ret_xmm, int nargs, TCGTemp **args) 
-{
-    int i, real_args, nb_rets, pi;
-    const TCGHelperInfo *info = &nlib_dummy_helper_info;
-    TCGOp *op;
-
-#ifdef CONFIG_PLUGIN
-    /* detect non-plugin helpers */
-    if (tcg_ctx->plugin_insn && unlikely(strncmp(info->name, "plugin_", 7))) {
-        tcg_ctx->plugin_insn->calls_helpers = true;
-    }
-#endif
+    // TCGOp *set_al;
+    // set_al = tcg_emit_op(INDEX_op_mov_i32);
+    // TCGOP_CALLO(set_al) = 6;
+    // TCGOP_CALLI(set_al) = 6;
 
     op = tcg_emit_op(INDEX_op_call);
+
+    // char __ops[7] = { 0x89, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00 } ;
+    // for (int i = 0; i < 7; i++) {
+    //     tcg_out8(tcg_ctx, __ops[i]);
+    // }
 
     pi = 0;
     nb_rets = 0;
@@ -1539,7 +1511,6 @@ void __tcg_gen_callN_nlib(void *func, TCGTemp *ret_r, TCGTemp *ret_xmm, int narg
     }
 
     TCGOP_CALLO(op) = nb_rets;
-    printf("nb_rets %d\n", nb_rets);
 
     real_args = 0;
     for (i = 0; i < nargs; i++) {

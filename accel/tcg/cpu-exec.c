@@ -394,6 +394,7 @@ const void *HELPER(lookup_tb_ptr)(CPUArchState *env)
         cpu_loop_exit(cpu);
     }
 
+    // @ Completely disable direct chaining here - even with '-d nochain' the epilogue isn't always called between blocks
     tb = tb_lookup(cpu, pc, cs_base, flags, cflags);
     if (tb == NULL) {
         return tcg_code_gen_epilogue;
@@ -425,6 +426,8 @@ cpu_tb_exec(CPUState *cpu, TranslationBlock *itb, int *tb_exit)
     log_cpu_exec(itb->pc, cpu, itb);
 
     qemu_thread_jit_execute();
+
+    // @ This is where the prologue jumps to the tb, then it jumps back here for epilogue
     ret = tcg_qemu_tb_exec(env, tb_ptr);
     cpu->can_do_io = 1;
     /*

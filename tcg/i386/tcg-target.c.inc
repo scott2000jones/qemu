@@ -4029,9 +4029,18 @@ static void tcg_target_qemu_prologue(TCGContext *s)
                   CPU_TEMP_BUF_NLONGS * sizeof(long));
 
     /* Save all callee saved registers.  */
-    for (i = 0; i < ARRAY_SIZE(tcg_target_callee_save_regs); i++) {
+    for (i = 0; i < ARRAY_SIZE(tcg_target_callee_save_regs); i++)
+    {
         tcg_out_push(s, tcg_target_callee_save_regs[i]);
     }
+
+    // tcg_out64(s, 0x847F0FF310EC8348);
+    // tcg_out32(s, 0x000024);
+    // tcg_out8(s, 0x00);
+    // char __ops[5] = {0x66, 0x48, 0x0F, 0x6E, 0xED};
+    // for (int i = 0; i < 5; i++) {
+    //     tcg_out8(s, __ops[i]);
+    // }
 
 #if TCG_TARGET_REG_BITS == 32
     tcg_out_ld(s, TCG_TYPE_PTR, TCG_AREG0, TCG_REG_ESP,
@@ -4058,7 +4067,7 @@ static void tcg_target_qemu_prologue(TCGContext *s)
     }
 # endif
     tcg_out_mov(s, TCG_TYPE_PTR, TCG_AREG0, tcg_target_call_iarg_regs[0]);
-    tcg_out_addi(s, TCG_REG_ESP, -stack_addend);
+    tcg_out_addi(s, TCG_REG_ESP, -stack_addend-16);
     /* jmp *tb.  */
     tcg_out_modrm(s, OPC_GRP5, EXT5_JMPN_Ev, tcg_target_call_iarg_regs[1]);
 #endif
@@ -4073,14 +4082,21 @@ static void tcg_target_qemu_prologue(TCGContext *s)
     /* TB epilogue */
     tb_ret_addr = tcg_splitwx_to_rx(s->code_ptr);
 
-    tcg_out_addi(s, TCG_REG_CALL_STACK, stack_addend);
+    tcg_out_addi(s, TCG_REG_CALL_STACK, stack_addend+16);
 
     if (have_avx2) {
         tcg_out_vex_opc(s, OPC_VZEROUPPER, 0, 0, 0, 0);
     }
+
+    // char _ops[8] = {0xF3, 0x0F, 0x6F, 0x85, 0x80, 0x4A, 0x00, 0x00};
+    // for (int i = 0; i < 8; i++) {
+    //     tcg_out8(s, _ops[i]);
+    // }
+
     for (i = ARRAY_SIZE(tcg_target_callee_save_regs) - 1; i >= 0; i--) {
         tcg_out_pop(s, tcg_target_callee_save_regs[i]);
     }
+
     tcg_out_opc(s, OPC_RET, 0, 0, 0);
 }
 
