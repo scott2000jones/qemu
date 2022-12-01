@@ -44,4 +44,5 @@ void nlib_register_txln_hook(unsigned long va, const char *fname);
 nlib_function *nlib_get_txln_hook(unsigned long va);
 void nlib_register_shared_lib(const char *name);
 char *nlib_get_shared_lib(unsigned int index);
+void set_nlib_enabled(void);
 #endif

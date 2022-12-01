@@ -9,6 +9,7 @@ static unsigned int nr_native_functions;
 static GHashTable *txln_hooks;
 static GArray *shared_libs;
 static unsigned int nr_shared_libs;
+static int enable_nlib;
 
 static const char *nlib_fname_denylist[] = {
     "__libc_start_main", 
@@ -104,9 +105,11 @@ void nlib_fn_add_arg(nlib_function *fn, nlib_type_class tc, int width, int cnst)
  */
 void nlib_register_txln_hook(target_ulong va, const char *fname)
 {
+    if (!enable_nlib) return;
+    
     for (int i = 0; i < nlib_fname_denylist_count; i++) {
         if (g_strcmp0(nlib_fname_denylist[i], fname) == 0) {
-            printf("Did not register nlib function %s: function is on denylist\n", fname);
+            // fprintf(stderr, "Did not register nlib function %s: function is on denylist\n", fname);
             return;
         }
     }
@@ -142,8 +145,7 @@ void nlib_register_txln_hook(target_ulong va, const char *fname)
         exit(EXIT_FAILURE);
     }
 
-    // printf("Successfully registered hook for %s in %s\n", fn->fname, fn->libname);
-    printf("%s in %s\n", fn->fname, fn->libname);
+    // fprintf(stderr, Successfully registered hook for %s in %s\n", fn->fname, fn->libname);
 
     g_hash_table_insert(txln_hooks, (gpointer)va, (gpointer)fn);
 }
@@ -158,10 +160,15 @@ nlib_function *nlib_get_txln_hook(target_ulong va)
 }
 
 void nlib_register_shared_lib(const char *name) {
+    if (!enable_nlib) return;
     g_array_append_val(shared_libs, name);
     nr_shared_libs++;
 }
 
 char *nlib_get_shared_lib(unsigned int index) {
     return g_array_index(shared_libs, char*, index);
+}
+
+void set_nlib_enabled(void) {
+    enable_nlib = 1;
 }

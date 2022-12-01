@@ -1487,17 +1487,7 @@ void tcg_gen_callN_nlib(void *func, TCGTemp *ret_r, TCGTemp *ret_xmm, int nargs,
     }
 #endif
 
-    // TCGOp *set_al;
-    // set_al = tcg_emit_op(INDEX_op_mov_i32);
-    // TCGOP_CALLO(set_al) = 6;
-    // TCGOP_CALLI(set_al) = 6;
-
     op = tcg_emit_op(INDEX_op_call);
-
-    // char __ops[7] = { 0x89, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00 } ;
-    // for (int i = 0; i < 7; i++) {
-    //     tcg_out8(tcg_ctx, __ops[i]);
-    // }
 
     pi = 0;
     nb_rets = 0;
@@ -4017,8 +4007,6 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
     info = tcg_call_info(op);
     flags = info->flags;
 
-    
-
     int num_v_iargs = 0;
     int num_i_iargs = 0;
 
@@ -4028,6 +4016,8 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
         if (ts->type == TCG_TYPE_V128) num_v_iargs++;
         else num_i_iargs++;
     }
+
+    
 
     TCGArg v_iargs[num_v_iargs];
     TCGArg i_iargs[num_i_iargs];
@@ -4187,6 +4177,9 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
     } else {
         save_globals(s, allocated_regs);
     }
+
+    // Set %al to the number of float arguments
+    tcg_out_movi(s, TCG_TYPE_I32, TCG_REG_EAX, num_v_iargs);
 
 #ifdef CONFIG_TCG_INTERPRETER
     {

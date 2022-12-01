@@ -14974,9 +14974,6 @@ static TCGTemp *gen_nlib_call_arg(DisasContext *s, int idx, nlib_type_class tc)
 #define MAX_ARGS 6
 static void gen_nlib_call(DisasContext *s, const nlib_function *fn)
 {
-    // Set AL register to $6 since we are about to pass 6 floating point args
-    gen_helper_nlib_set_al();
-
     // Prepare function arguments
     TCGTemp *args[(MAX_ARGS*2)+1];
 
@@ -14986,7 +14983,7 @@ static void gen_nlib_call(DisasContext *s, const nlib_function *fn)
 
     // Generate the call instruction
     tcg_gen_callN_nlib(fn->fnptr, tcgv_i64_temp(cpu_reg(s, 0)), tcgv_vec_temp(vfp_reg(s, 0)), MAX_ARGS*2, args);
-}
+    }
 
 static void aarch64_tr_translate_nlib_call(DisasContextBase *dcbase, CPUState *cpu, void *fn)
 {

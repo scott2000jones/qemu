@@ -3433,7 +3433,7 @@ found:
         // A type of '1' indicates a NEEDED section which specifies a shared library
         if (dyn[i] == 1) {
             // Value of the NEEDED entry is a string table offset to the needed library's name
-            printf("Found shared library: %s\n", &strings[dyn[i+1]]);
+            // fprintf(stderr, "Found shared library: %s\n", &strings[dyn[i+1]]);
             nlib_register_shared_lib(&strings[dyn[i+1]]);
         }
     }
@@ -3486,18 +3486,15 @@ found:
     for (int i = 0; i < relnum; i++) {
         unsigned int symbol = ELF_R_SYM(rela[i].r_info);
         // fprintf(stderr, "got rela: %lx %lx %s", rela[i].r_offset, syms[symbol].st_value, &strings[syms[symbol].st_name]);
-        // printf("got rela: %lx %lx %s", rela[i].r_offset, syms[symbol].st_value, &strings[syms[symbol].st_name]);
 
         uint64_t va = (uint64_t)g_hash_table_lookup(plt_map, (gconstpointer)rela[i].r_offset);
         if (va) {
             // fprintf(stderr, " mapped to %lx\n", va);
-            // printf(" mapped to %lx\n", va);
             nlib_register_txln_hook(va, &strings[syms[symbol].st_name]);
         } else {
             // fprintf(stderr, " no map\n");
         }
     }
-    printf("    Done registering hooks\n");
 
     g_hash_table_destroy(plt_map);
 
