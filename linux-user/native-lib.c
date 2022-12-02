@@ -38,6 +38,7 @@ static const char *nlib_fname_denylist[] = {
     "OPENSSL_LH_retrieve",
     "BIO_free_all",
     "BIO_ctrl",
+    "RAND_bytes",
 };
 
 static int nlib_fname_denylist_count = sizeof(nlib_fname_denylist)/sizeof(nlib_fname_denylist[0]);
@@ -137,7 +138,6 @@ void nlib_register_txln_hook(target_ulong va, const char *fname)
         }
     }
 
-    // printf("> ");
     // Allocate storage for the native function descriptor.
     nlib_function *fn = g_malloc(sizeof(nlib_function));
 
