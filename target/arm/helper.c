@@ -9099,10 +9099,6 @@ uint32_t HELPER(rbit)(uint32_t x)
     return revbit32(x);
 }
 
-void HELPER(nlib_set_al)(void) {
-    asm volatile("mov $6, %eax");
-}
-
 #ifdef CONFIG_USER_ONLY
 
 static void switch_mode(CPUARMState *env, int mode)
