@@ -3495,7 +3495,6 @@ found:
             // fprintf(stderr, " no map\n");
         }
     }
-
     g_hash_table_destroy(plt_map);
 
     g_free(syms);

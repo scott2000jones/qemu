@@ -12,9 +12,32 @@ static unsigned int nr_shared_libs;
 static int enable_nlib;
 
 static const char *nlib_fname_denylist[] = {
-    "__libc_start_main", 
+    "__libc_start_main",
     "__gmon_start__",
     "__cxa_atexit",
+    
+    "OSSL_CMP_CTX_get0_validatedSrvCert",
+    "OSSL_STACK_OF_X509_free",
+    "PKCS12_create_ex2",
+    "BIO_ADDR_dup",
+    "SSL_CTX_compress_certs",
+    "PKCS12_SAFEBAG_set0_attrs",
+    "CMS_final_digest",
+    "OSSL_sleep",
+
+    "fstat",
+
+    "BIO_printf",
+    "EVP_MD_fetch",
+    "signal",
+    "BIO_free",
+    "OPENSSL_LH_insert",
+    "BIO_new_fp",
+    "EVP_Digest",
+    "qsort",
+    "OPENSSL_LH_retrieve",
+    "BIO_free_all",
+    "BIO_ctrl",
 };
 
 static int nlib_fname_denylist_count = sizeof(nlib_fname_denylist)/sizeof(nlib_fname_denylist[0]);
@@ -109,7 +132,7 @@ void nlib_register_txln_hook(target_ulong va, const char *fname)
     
     for (int i = 0; i < nlib_fname_denylist_count; i++) {
         if (g_strcmp0(nlib_fname_denylist[i], fname) == 0) {
-            // fprintf(stderr, "Did not register nlib function %s: function is on denylist\n", fname);
+            // fprintf(stderr, "> Did not register nlib function %s: function is on denylist\n", fname);
             return;
         }
     }
@@ -131,7 +154,7 @@ void nlib_register_txln_hook(target_ulong va, const char *fname)
         fn->mdl = g_module_open(fn->libname, 0);
         if (!fn->mdl) {
             fprintf(stderr, "nlib: could not open module '%s'\n", fn->libname);
-            exit(EXIT_FAILURE);
+            return;
         }
 
         // Attempt to resolve the function symbol from the module.
@@ -145,7 +168,8 @@ void nlib_register_txln_hook(target_ulong va, const char *fname)
         exit(EXIT_FAILURE);
     }
 
-    // fprintf(stderr, Successfully registered hook for %s in %s\n", fn->fname, fn->libname);
+    // fprintf(stderr, "Successfully registered hook for %s in %s\n", fn->fname, fn->libname);
+    // fprintf(stderr, "\"%s\",\n", fn->fname);
 
     g_hash_table_insert(txln_hooks, (gpointer)va, (gpointer)fn);
 }
