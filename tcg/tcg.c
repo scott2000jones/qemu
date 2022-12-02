@@ -1474,7 +1474,7 @@ static TCGHelperInfo nlib_dummy_helper_info = {
     .typemask = 0
 };
 
-void tcg_gen_callN_nlib(void *func, TCGTemp *ret, int nargs, TCGTemp **args) 
+void tcg_gen_callN_nlib(void *func, TCGTemp *ret_r, TCGTemp *ret_xmm, int nargs, TCGTemp **args) 
 {
     int i, real_args, nb_rets, pi;
     const TCGHelperInfo *info = &nlib_dummy_helper_info;
@@ -1490,12 +1490,16 @@ void tcg_gen_callN_nlib(void *func, TCGTemp *ret, int nargs, TCGTemp **args)
     op = tcg_emit_op(INDEX_op_call);
 
     pi = 0;
-    if (ret != NULL) {
-        op->args[pi++] = temp_arg(ret);
-        nb_rets = 1;
-    } else {
-        nb_rets = 0;
+    nb_rets = 0;
+    if (ret_r != NULL) {
+        op->args[pi++] = temp_arg(ret_r);
+        nb_rets++;
     }
+    if (ret_xmm != NULL) {
+        op->args[pi++] = temp_arg(ret_xmm);
+        nb_rets++;
+    }
+
     TCGOP_CALLO(op) = nb_rets;
 
     real_args = 0;
