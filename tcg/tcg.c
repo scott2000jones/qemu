@@ -4177,6 +4177,9 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
     } else {
         save_globals(s, allocated_regs);
     }
+    
+    // Set %al to the number of float arguments
+    tcg_out_movi(s, TCG_TYPE_I32, TCG_REG_EAX, num_v_iargs);
 
 #ifdef CONFIG_TCG_INTERPRETER
     {
