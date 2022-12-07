@@ -16,29 +16,52 @@ static const char *nlib_fname_denylist[] = {
     "__gmon_start__",
     "__cxa_atexit",
     
-    "OSSL_CMP_CTX_get0_validatedSrvCert",
-    "OSSL_STACK_OF_X509_free",
-    "PKCS12_create_ex2",
-    "BIO_ADDR_dup",
-    "SSL_CTX_compress_certs",
-    "PKCS12_SAFEBAG_set0_attrs",
-    "CMS_final_digest",
-    "OSSL_sleep",
+    // "OSSL_CMP_CTX_get0_validatedSrvCert",
+    // "OSSL_STACK_OF_X509_free",
+    // "PKCS12_create_ex2",
+    // "BIO_ADDR_dup",
+    // "SSL_CTX_compress_certs",
+    // "PKCS12_SAFEBAG_set0_attrs",
+    // "CMS_final_digest",
+    // "OSSL_sleep",
 
     "fstat",
 
-    "BIO_printf",
-    "EVP_MD_fetch",
+    /// --> OLD first attempt at OpenSSL Denylist
+
+    // "BIO_printf",
+    // "EVP_MD_fetch",
+    // "signal",
+    // "BIO_free",
+    // "OPENSSL_LH_insert",
+    // "BIO_new_fp",
+    // "EVP_Digest",
+    // "qsort",
+    // "OPENSSL_LH_retrieve",
+    // "BIO_free_all",
+    // "BIO_ctrl",
+    // "RAND_bytes",
+
+    //  -----------------------------------------------------------------------------------------------
+    // Attempt 2
+
     "signal",
-    "BIO_free",
-    "OPENSSL_LH_insert",
-    "BIO_new_fp",
-    "EVP_Digest",
     "qsort",
-    "OPENSSL_LH_retrieve",
-    "BIO_free_all",
     "BIO_ctrl",
-    "RAND_bytes",
+    "EVP_Cipher",
+    "ERR_print_errors",
+    "BIO_free_all",
+    "OPENSSL_LH_retrieve",
+    "EVP_CIPHER_CTX_new",
+    "BIO_new_fp",
+    "OPENSSL_LH_insert",
+    "EVP_CipherInit_ex",
+    "BIO_free",
+    "EVP_CIPHER_CTX_free",
+    "EVP_CIPHER_CTX_set_key_length",
+    "EVP_CIPHER_fetch",
+    "BIO_printf",
+
 };
 
 static int nlib_fname_denylist_count = sizeof(nlib_fname_denylist)/sizeof(nlib_fname_denylist[0]);
@@ -58,33 +81,8 @@ void nlib_init(void)
  */
 nlib_function *nlib_add_function(const char *fname, const char *libname)
 {
-    // Allocate storage for the native function descriptor.
-    nlib_function *fn = g_malloc(sizeof(nlib_function));
-
-    // Zero out the structure.
-    memset(fn, 0, sizeof(*fn));
-
-    // Copy in the function details that we know at this time.
-    fn->fname = g_strdup(fname);
-    fn->libname = g_strdup(libname);
-    fn->mdl = g_module_open(fn->libname, 0);
-    if (!fn->mdl) {
-        fprintf(stderr, "nlib: could not open module '%s'\n", libname);
-        exit(EXIT_FAILURE);
-    }
-
-    // Attempt to resolve the function symbol from the module.
-    if (!g_module_symbol((GModule *)fn->mdl, fn->fname, &fn->fnptr)) {
-        fprintf(stderr, "nlib: could not resolve function %s\n", fn->fname);
-        exit(EXIT_FAILURE);
-    }
-
-    // Add the new function to the list.
-    nr_native_functions++;
-    native_functions = g_realloc(native_functions, sizeof(nlib_function *) * nr_native_functions);
-    native_functions[nr_native_functions-1] = fn;
-
-    return fn;
+    return NULL;
+    
 }
 
 /**
@@ -131,6 +129,7 @@ void nlib_register_txln_hook(target_ulong va, const char *fname)
 {
     if (!enable_nlib) return;
     
+
     for (int i = 0; i < nlib_fname_denylist_count; i++) {
         if (g_strcmp0(nlib_fname_denylist[i], fname) == 0) {
             // fprintf(stderr, "> Did not register nlib function %s: function is on denylist\n", fname);
@@ -165,7 +164,7 @@ void nlib_register_txln_hook(target_ulong va, const char *fname)
     }
     if (!found) {
         fprintf(stderr, "nlib: could not resolve function %s\n", fn->fname);
-        exit(EXIT_FAILURE);
+        return;
     }
 
     // fprintf(stderr, "Successfully registered hook for %s in %s\n", fn->fname, fn->libname);
