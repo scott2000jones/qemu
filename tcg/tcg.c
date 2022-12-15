@@ -4017,8 +4017,6 @@ static void tcg_reg_alloc_call(TCGContext *s, TCGOp *op)
         else num_i_iargs++;
     }
 
-    
-
     TCGArg v_iargs[num_v_iargs];
     TCGArg i_iargs[num_i_iargs];
 

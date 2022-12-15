@@ -30,37 +30,51 @@ static const char *nlib_fname_denylist[] = {
     /// --> OLD first attempt at OpenSSL Denylist
 
     // "BIO_printf",
-    // "EVP_MD_fetch",
+    // "EVP_MD_fetch",          //
     // "signal",
     // "BIO_free",
     // "OPENSSL_LH_insert",
     // "BIO_new_fp",
-    // "EVP_Digest",
+    // "EVP_Digest",            //
     // "qsort",
     // "OPENSSL_LH_retrieve",
     // "BIO_free_all",
     // "BIO_ctrl",
-    // "RAND_bytes",
+    // "RAND_bytes",            //
 
     //  -----------------------------------------------------------------------------------------------
     // Attempt 2
 
-    "signal",
+    // "signal",
+    // "qsort",
+    // "BIO_ctrl",
+    // "ERR_print_errors",
+    // "BIO_free_all",
+    // "BIO_new_fp",
+    // "OPENSSL_LH_insert",
+    // "BIO_free",
+    // "BIO_printf",
+    
+    // "EVP_Cipher",
+    // "EVP_CIPHER_CTX_new",
+    // "EVP_CipherInit_ex",
+    // "EVP_CIPHER_CTX_free",
+    // "EVP_CIPHER_CTX_set_key_length",
+    // "EVP_CIPHER_fetch",
+
+    //  ---------------------------------------------------------
+    // Attempt 3
     "qsort",
-    "BIO_ctrl",
-    "EVP_Cipher",
-    "ERR_print_errors",
-    "BIO_free_all",
-    "OPENSSL_LH_retrieve",
-    "EVP_CIPHER_CTX_new",
-    "BIO_new_fp",
+    "signal",
     "OPENSSL_LH_insert",
-    "EVP_CipherInit_ex",
-    "BIO_free",
-    "EVP_CIPHER_CTX_free",
-    "EVP_CIPHER_CTX_set_key_length",
-    "EVP_CIPHER_fetch",
+    "OPENSSL_LH_retrieve",
     "BIO_printf",
+    "BIO_free",
+    "BIO_new_fp",
+    "BIO_free_all",
+    "BIO_ctrl",
+    "ERR_print_errors",
+
 
 };
 
@@ -128,7 +142,6 @@ void nlib_fn_add_arg(nlib_function *fn, nlib_type_class tc, int width, int cnst)
 void nlib_register_txln_hook(target_ulong va, const char *fname)
 {
     if (!enable_nlib) return;
-    
 
     for (int i = 0; i < nlib_fname_denylist_count; i++) {
         if (g_strcmp0(nlib_fname_denylist[i], fname) == 0) {
