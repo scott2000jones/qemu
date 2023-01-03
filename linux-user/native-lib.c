@@ -4,8 +4,6 @@
 
 #include <gmodule.h>
 
-static nlib_function **native_functions;
-static unsigned int nr_native_functions;
 static GHashTable *txln_hooks;
 static GArray *shared_libs;
 static unsigned int nr_shared_libs;
@@ -16,54 +14,9 @@ static const char *nlib_fname_denylist[] = {
     "__gmon_start__",
     "__cxa_atexit",
     
-    // "OSSL_CMP_CTX_get0_validatedSrvCert",
-    // "OSSL_STACK_OF_X509_free",
-    // "PKCS12_create_ex2",
-    // "BIO_ADDR_dup",
-    // "SSL_CTX_compress_certs",
-    // "PKCS12_SAFEBAG_set0_attrs",
-    // "CMS_final_digest",
-    // "OSSL_sleep",
-
     "fstat",
+    // "printf",
 
-    /// --> OLD first attempt at OpenSSL Denylist
-
-    // "BIO_printf",
-    // "EVP_MD_fetch",          //
-    // "signal",
-    // "BIO_free",
-    // "OPENSSL_LH_insert",
-    // "BIO_new_fp",
-    // "EVP_Digest",            //
-    // "qsort",
-    // "OPENSSL_LH_retrieve",
-    // "BIO_free_all",
-    // "BIO_ctrl",
-    // "RAND_bytes",            //
-
-    //  -----------------------------------------------------------------------------------------------
-    // Attempt 2
-
-    // "signal",
-    // "qsort",
-    // "BIO_ctrl",
-    // "ERR_print_errors",
-    // "BIO_free_all",
-    // "BIO_new_fp",
-    // "OPENSSL_LH_insert",
-    // "BIO_free",
-    // "BIO_printf",
-    
-    // "EVP_Cipher",
-    // "EVP_CIPHER_CTX_new",
-    // "EVP_CipherInit_ex",
-    // "EVP_CIPHER_CTX_free",
-    // "EVP_CIPHER_CTX_set_key_length",
-    // "EVP_CIPHER_fetch",
-
-    //  ---------------------------------------------------------
-    // Attempt 3
     "qsort",
     "signal",
     "OPENSSL_LH_insert",
@@ -74,8 +27,6 @@ static const char *nlib_fname_denylist[] = {
     "BIO_free_all",
     "BIO_ctrl",
     "ERR_print_errors",
-
-
 };
 
 static int nlib_fname_denylist_count = sizeof(nlib_fname_denylist)/sizeof(nlib_fname_denylist[0]);
@@ -87,53 +38,6 @@ void nlib_init(void)
 {
     txln_hooks = g_hash_table_new(NULL, NULL);
     shared_libs = g_array_new(false, true, sizeof(unsigned long));
-}
-
-/**
- * Registers a function to be redirected to native code from a guest
- * shared-library invocation.
- */
-nlib_function *nlib_add_function(const char *fname, const char *libname)
-{
-    return NULL;
-    
-}
-
-/**
- * Looks up a function from the registered function list, given an index.
- */
-nlib_function *nlib_lookup_function(unsigned int idx)
-{
-    if (idx >= nr_native_functions) {
-        return NULL;
-    }
-
-    return native_functions[idx];
-}
-
-/**
- * Sets the metadata for the return type of the function.
- */
-void nlib_fn_set_ret(nlib_function *fn, nlib_type_class tc, int width, int cnst)
-{
-    fn->retty.tc = tc;
-    fn->retty.width = width;
-    fn->retty.cnst = cnst;
-}
-
-/**
- * Adds new argument metadata to the function.
- */
-void nlib_fn_add_arg(nlib_function *fn, nlib_type_class tc, int width, int cnst)
-{
-    fn->nr_args++;
-    fn->argty = g_realloc(fn->argty, sizeof(nlib_type) * fn->nr_args);
-
-    nlib_type *t = &fn->argty[fn->nr_args-1];
-
-    t->tc = tc;
-    t->width = width;
-    t->cnst = cnst;
 }
 
 /**
